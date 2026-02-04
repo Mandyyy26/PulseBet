@@ -1,0 +1,40 @@
+import type { Market } from '@/types/market';
+
+export const MOCK_MARKETS: Market[] = [
+  {
+    id: 'btc-100k',
+    question: 'Will Bitcoin hit $100k in 2026?',
+    description: 'Market resolves YES if BTC reaches $100,000 USD on any major exchange before Dec 31, 2026.',
+    category: 'Crypto',
+    icon: '₿',
+    endTime: new Date('2026-12-31'),
+    totalVolume: 0,
+    yesOdds: 65,
+    noOdds: 35,
+    status: 'OPEN',
+  },
+  {
+    id: 'eth-merge',
+    question: 'Will Ethereum 3.0 launch in 2026?',
+    description: 'Market resolves YES if Ethereum 3.0 mainnet launches before Dec 31, 2026.',
+    category: 'Crypto',
+    icon: 'Ξ',
+    endTime: new Date('2026-12-31'),
+    totalVolume: 0,
+    yesOdds: 40,
+    noOdds: 60,
+    status: 'OPEN',
+  },
+  {
+    id: 'ai-breakthrough',
+    question: 'Will AGI be achieved in 2026?',
+    description: 'Market resolves YES if artificial general intelligence is officially announced by a major lab.',
+    category: 'Technology',
+    icon: '🤖',
+    endTime: new Date('2026-12-31'),
+    totalVolume: 0,
+    yesOdds: 15,
+    noOdds: 85,
+    status: 'OPEN',
+  },
+];

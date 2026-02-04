@@ -2,17 +2,19 @@
 import { useState } from 'react';
 import { useAccount, useWalletClient } from 'wagmi';
 import { getYellowClient } from '@/lib/yellow/client';
+import { useBettingStore } from '@/store/bettingStore';
 
 export function useYellow() {
   const { address, isConnected: isWalletConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
   
   const [connected, setConnected] = useState(false);
-  const [balance, setBalance] = useState<string>('0');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSettlement, setShowSettlement] = useState(false);
 
-  // Manual connect function - called when user clicks "Open Session"
+  const { initializeBalance } = useBettingStore();
+
   const openSession = async () => {
     if (!isWalletConnected || !address || !walletClient) {
       setError('Please connect your wallet first');
@@ -27,7 +29,7 @@ export function useYellow() {
       await client.connect(address, walletClient);
       
       setConnected(true);
-      setBalance('100.00'); // TODO: Query real balance from Yellow
+      initializeBalance(100); // Mock $100 deposit
       console.log('✅ Yellow session opened successfully');
     } catch (err) {
       setError((err as Error).message);
@@ -38,23 +40,29 @@ export function useYellow() {
     }
   };
 
-  // Manual disconnect function
   const closeSession = () => {
+    // Show settlement modal instead of direct close
+    setShowSettlement(true);
+  };
+
+  const handleSettlementComplete = () => {
     const client = getYellowClient();
     client.disconnect();
     setConnected(false);
-    setBalance('0');
+    setShowSettlement(false);
     console.log('🔌 Yellow session closed');
   };
 
   return { 
     connected, 
-    balance, 
     loading, 
     error,
     walletAddress: address,
     isWalletConnected,
     openSession,
-    closeSession
+    closeSession,
+    showSettlement,
+    setShowSettlement,
+    handleSettlementComplete,
   };
 }
