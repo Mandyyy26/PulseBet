@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Market, Bet, Position, UserBalance } from '@/types/market';
-import { MOCK_MARKETS } from '@/lib/markets/mockData';
+import { LIVE_MARKETS } from '@/lib/markets/mockData';
 
 interface BettingState {
   // State
@@ -17,22 +17,23 @@ interface BettingState {
   updateBalance: (amount: number) => void;
   initializeBalance: (amount: number) => void;
   resolveMarket: (marketId: string, outcome: 'YES' | 'NO') => void;
+  autoResolveExpiredMarkets: () => void;
   settleUserBets: () => { totalWinnings: number; settledBets: Bet[] };
   clearHistory: () => void;
+  resetMarkets: () => void;
 }
 
 export const useBettingStore = create<BettingState>((set, get) => ({
   // Initial state
-  markets: MOCK_MARKETS,
+  markets: LIVE_MARKETS,
   bets: [],
   positions: new Map(),
   balance: {
-    available: 100, // Start with $100 mock balance
+    available: 100,
     locked: 0,
     total: 100,
   },
 
-  // Place a bet (off-chain simulation for now)
   placeBet: async (marketId, outcome, amount) => {
     const state = get();
     const market = state.markets.find(m => m.id === marketId);
@@ -45,8 +46,8 @@ export const useBettingStore = create<BettingState>((set, get) => ({
       throw new Error('Insufficient balance');
     }
 
-    if (market.status !== 'OPEN') {
-      throw new Error('Market is closed');
+    if (market.status !== 'LIVE') {
+      throw new Error('Market is not live');
     }
 
     // Create bet
@@ -56,12 +57,13 @@ export const useBettingStore = create<BettingState>((set, get) => ({
     const newBet: Bet = {
       id: `bet-${Date.now()}-${Math.random()}`,
       marketId,
-      userId: 'current-user', // Will be replaced with actual wallet address
+      userId: 'current-user',
       outcome,
       amount,
       odds,
       timestamp: new Date(),
       potentialPayout,
+      settled: false,
     };
 
     // Update position
@@ -82,10 +84,17 @@ export const useBettingStore = create<BettingState>((set, get) => ({
           potentialWin: potentialPayout,
         };
 
-    // Update market volume
+    // Update market
     const updatedMarkets = state.markets.map(m =>
       m.id === marketId
-        ? { ...m, totalVolume: m.totalVolume + amount }
+        ? { 
+            ...m, 
+            totalVolume: m.totalVolume + amount,
+            betCount: m.betCount + 1,
+            // Update odds based on new bet (simple parimutuel)
+            yesOdds: outcome === 'YES' ? Math.max(20, m.yesOdds - 2) : Math.min(80, m.yesOdds + 1),
+            noOdds: outcome === 'NO' ? Math.max(20, m.noOdds - 2) : Math.min(80, m.noOdds + 1),
+          }
         : m
     );
 
@@ -96,7 +105,6 @@ export const useBettingStore = create<BettingState>((set, get) => ({
       total: state.balance.total,
     };
 
-    // Simulate network delay (Yellow Network would be instant in reality)
     await new Promise(resolve => setTimeout(resolve, 100));
 
     set({
@@ -142,7 +150,6 @@ export const useBettingStore = create<BettingState>((set, get) => ({
     });
   },
 
-  // Resolve a market (admin function)
   resolveMarket: (marketId, outcome) => {
     const state = get();
     const updatedMarkets = state.markets.map(m =>
@@ -151,11 +158,34 @@ export const useBettingStore = create<BettingState>((set, get) => ({
         : m
     );
 
-    set({ markets: updatedMarkets });
+    // Update bets with results
+    const updatedBets = state.bets.map(bet => {
+      if (bet.marketId === marketId) {
+        const won = bet.outcome === outcome;
+        return { ...bet, settled: true, won };
+      }
+      return bet;
+    });
+
+    set({ markets: updatedMarkets, bets: updatedBets });
     console.log(`✅ Market ${marketId} resolved as ${outcome}`);
   },
 
-  // Calculate and settle all user bets
+  // Auto-resolve expired markets (simulated for demo)
+  autoResolveExpiredMarkets: () => {
+    const state = get();
+    const now = new Date();
+    
+    state.markets.forEach(market => {
+      if (market.status === 'LIVE' && market.endTime <= now && market.autoResolve) {
+        // Simulate random outcome for demo
+        const outcome = Math.random() > 0.5 ? 'YES' : 'NO';
+        console.log(`⚡ Auto-resolving ${market.id} as ${outcome}`);
+        get().resolveMarket(market.id, outcome);
+      }
+    });
+  },
+
   settleUserBets: () => {
     const state = get();
     let totalWinnings = 0;
@@ -166,12 +196,10 @@ export const useBettingStore = create<BettingState>((set, get) => ({
       
       if (market && market.status === 'SETTLED' && market.result) {
         if (bet.outcome === market.result) {
-          // User won!
           totalWinnings += bet.potentialPayout;
           settledBets.push({ ...bet });
           console.log(`🎉 Won bet ${bet.id}: $${bet.potentialPayout.toFixed(2)}`);
         } else {
-          // User lost
           console.log(`😢 Lost bet ${bet.id}: $${bet.amount.toFixed(2)}`);
         }
       }
@@ -181,11 +209,16 @@ export const useBettingStore = create<BettingState>((set, get) => ({
     return { totalWinnings, settledBets };
   },
 
-  // Clear bet history after settlement
   clearHistory: () => {
     set({
       bets: [],
       positions: new Map(),
+    });
+  },
+
+  resetMarkets: () => {
+    set({
+      markets: [...LIVE_MARKETS],
     });
   },
 }));
