@@ -1,13 +1,14 @@
 import { http, createConfig } from 'wagmi';
-import { base } from 'wagmi/chains';
-import { metaMask } from 'wagmi/connectors';
+import { sepolia } from 'wagmi/chains';
+import { metaMask, injected } from 'wagmi/connectors';
 
 export const wagmiConfig = createConfig({
-  chains: [base],
+  chains: [sepolia],
   connectors: [
+    injected(), // Supports all injected wallets
     metaMask(),
   ],
   transports: {
-    [base.id]: http(),
+    [sepolia.id]: http(),
   },
 });

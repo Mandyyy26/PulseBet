@@ -11,6 +11,7 @@ import { BetHistory } from '@/components/betting/BetHistory';
 import { LiveActivityFeed } from '@/components/betting/LiveActivityFeed';
 import type { LiveMatch } from '@/types/soccer';
 import { SettlementModal } from '@/components/betting/SettlementModal';
+import { YellowStatus } from '@/components/YellowStatus';
 
 export default function Home() {
   const {
@@ -273,19 +274,21 @@ export default function Home() {
 
                   {/* Deposit Button */}
                   <button
-                    onClick={handleDeposit}
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 px-6 py-4 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
-                        Opening State Channel...
-                      </span>
-                    ) : (
-                      `🟡 Open State Channel with ${depositAmount} USDC`
-                    )}
-                  </button>
+  onClick={handleDeposit}
+  disabled={loading || !isWalletConnected || !address}
+  className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 px-6 py-4 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  {loading ? (
+    <span className="flex items-center justify-center gap-2">
+      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
+      Opening State Channel...
+    </span>
+  ) : !isWalletConnected ? (
+    'Please Connect Wallet First'
+  ) : (
+    `Open State Channel with ${depositAmount} USDC`
+  )}
+</button>
                 </div>
               )}
 
@@ -463,6 +466,7 @@ export default function Home() {
     channelId={channelId || undefined}
   />
 )}
+<YellowStatus />
     </div>
   );
 }
